@@ -395,6 +395,34 @@ public class WaveformComponent extends JPanel {
         g2d.setColor(HOVER_COLOR);
         g2d.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 0, new float[]{5}, 0));
         g2d.drawLine(hoverPosition, timelineHeight, hoverPosition, height);
+        
+        // Draw hover time at the top of the hover line
+        if (audioDurationMicroseconds > 0) {
+            float hoverProgress = (float) hoverPosition / width;
+            long hoverTimeMicroseconds = (long) (hoverProgress * audioDurationMicroseconds);
+            String hoverTimeLabel = formatTime(hoverTimeMicroseconds);
+            
+            // Set font for time display
+            g2d.setFont(g2d.getFont().deriveFont(Font.PLAIN, 9f));
+            FontMetrics fm = g2d.getFontMetrics();
+            int textWidth = fm.stringWidth(hoverTimeLabel);
+            
+            // Position the time label above the timeline
+            int labelX = hoverPosition - textWidth / 2;
+            int labelY = 2; // Just below the top edge
+            
+            // Ensure the label doesn't go outside the component bounds
+            if (labelX < 0) labelX = 2;
+            if (labelX + textWidth > width) labelX = width - textWidth - 2;
+            
+            // Draw background rectangle for better readability
+            g2d.setColor(new Color(0, 0, 0, 150)); // Semi-transparent black background
+            g2d.fillRect(labelX - 2, labelY - 2, textWidth + 4, fm.getHeight() + 2);
+            
+            // Draw the time text
+            g2d.setColor(HOVER_COLOR);
+            g2d.drawString(hoverTimeLabel, labelX, labelY + fm.getAscent());
+        }
     }
     
     // Event handling for seeking
