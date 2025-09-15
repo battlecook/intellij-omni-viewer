@@ -85,10 +85,10 @@ public class AudioEditorComponent extends JPanel {
         stopButton.addActionListener(new StopActionListener());
         controlPanel.add(stopButton);
         
-        // Waveform component - right below buttons (half size)
+        // Waveform component - right below buttons (increased size for timeline)
         waveformComponent = new WaveformComponent();
         waveformComponent.addSeekListener(this::onSeek);
-        waveformComponent.setPreferredSize(new Dimension(300, 60));
+        waveformComponent.setPreferredSize(new Dimension(300, 80));
         waveformComponent.setMinimumSize(new Dimension(200, 40));
         
         // Add buttons and waveform to center panel
@@ -161,6 +161,12 @@ public class AudioEditorComponent extends JPanel {
             // Now open the clip with the original stream
             audioClip = AudioSystem.getClip();
             audioClip.open(audioStream);
+            
+            // Set audio duration for timeline
+            if (audioClip.isOpen()) {
+                long duration = audioClip.getMicrosecondLength();
+                waveformComponent.setAudioDuration(duration);
+            }
             
             statusLabel.setText("Audio loaded successfully");
             playPauseButton.setEnabled(true);

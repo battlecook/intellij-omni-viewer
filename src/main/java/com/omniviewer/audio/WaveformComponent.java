@@ -4,6 +4,7 @@ import com.intellij.util.ui.JBUI;
 
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -18,16 +19,19 @@ public class WaveformComponent extends JPanel {
     private float progress = 0.0f;
     private int hoverPosition = -1;
     private boolean isHovering = false;
+    private long audioDurationMicroseconds = 0; // Total audio duration in microseconds
     
     // Colors
-    private static final Color WAVEFORM_COLOR = new Color(100, 150, 255);
+    private static final Color WAVEFORM_COLOR = new Color(100, 50, 150); // Dark purple like in the image
     private static final Color PROGRESS_COLOR = new Color(255, 100, 100);
-    private static final Color BACKGROUND_COLOR = new Color(240, 240, 240);
+    private static final Color BACKGROUND_COLOR = new Color(60, 60, 60); // Dark gray background
     private static final Color HOVER_COLOR = new Color(255, 200, 100);
+    private static final Color TIMELINE_COLOR = Color.WHITE; // White timeline markers
+    private static final Color TIMELINE_TEXT_COLOR = Color.WHITE; // White text
     
     public WaveformComponent() {
-        setPreferredSize(new Dimension(300, 60));
-        setMinimumSize(new Dimension(200, 40));
+        setPreferredSize(new Dimension(300, 80)); // Increased height to accommodate timeline
+        setMinimumSize(new Dimension(200, 60));
         setBorder(JBUI.Borders.empty(10));
         
         // Add mouse listener for seeking
@@ -65,11 +69,24 @@ public class WaveformComponent extends JPanel {
     public void setWaveformData(AudioInputStream audioStream) {
         try {
             waveformData = extractWaveformData(audioStream);
+            // Calculate duration from the audio stream
+            if (audioStream != null) {
+                AudioFormat format = audioStream.getFormat();
+                long frameLength = audioStream.getFrameLength();
+                if (frameLength != AudioSystem.NOT_SPECIFIED) {
+                    audioDurationMicroseconds = (long) ((frameLength * 1_000_000.0) / format.getFrameRate());
+                }
+            }
             repaint();
         } catch (IOException e) {
             e.printStackTrace();
             waveformData = new ArrayList<>();
         }
+    }
+    
+    public void setAudioDuration(long durationMicroseconds) {
+        this.audioDurationMicroseconds = durationMicroseconds;
+        repaint();
     }
     
     public void setProgress(float progress) {
@@ -179,7 +196,10 @@ public class WaveformComponent extends JPanel {
             return;
         }
         
-        // Draw waveform
+        // Draw timeline at the top
+        drawTimeline(g2d, width, height);
+        
+        // Draw waveform (offset down to make room for timeline)
         drawWaveform(g2d, width, height);
         
         // Draw progress overlay
@@ -193,44 +213,104 @@ public class WaveformComponent extends JPanel {
         g2d.dispose();
     }
     
+    private void drawTimeline(Graphics2D g2d, int width, int height) {
+        if (audioDurationMicroseconds <= 0) return;
+        
+        g2d.setColor(TIMELINE_COLOR);
+        g2d.setFont(g2d.getFont().deriveFont(Font.PLAIN, 9f));
+        FontMetrics fm = g2d.getFontMetrics();
+        
+        // Timeline area is at the top 25 pixels
+        int timelineHeight = 25;
+        int timelineY = 2;
+        
+        // Calculate time intervals - show markers every 0.5 seconds for short audio
+        long intervalMicroseconds = 500_000; // 0.5 seconds
+        long totalSeconds = audioDurationMicroseconds / 1_000_000;
+        
+        // Adjust interval based on total duration and width
+        if (totalSeconds > 60) {
+            intervalMicroseconds = 5_000_000; // 5 seconds for longer audio
+        } else if (totalSeconds > 10) {
+            intervalMicroseconds = 1_000_000; // 1 second
+        } else if (totalSeconds <= 3) {
+            intervalMicroseconds = 500_000; // 0.5 seconds for very short audio
+        }
+        
+        // Draw timeline markers
+        for (long time = 0; time <= audioDurationMicroseconds; time += intervalMicroseconds) {
+            float progress = (float) time / audioDurationMicroseconds;
+            int x = (int) (progress * width);
+            
+            // Draw vertical line - thin white line like in the image
+            g2d.setColor(TIMELINE_COLOR);
+            g2d.setStroke(new BasicStroke(1.0f));
+            g2d.drawLine(x, timelineY, x, timelineY + timelineHeight);
+            
+            // Draw time label - white text like in the image
+            String timeLabel = formatTime(time);
+            int textWidth = fm.stringWidth(timeLabel);
+            g2d.setColor(TIMELINE_TEXT_COLOR);
+            g2d.drawString(timeLabel, x - textWidth / 2, timelineY + 12);
+        }
+    }
+    
+    private String formatTime(long microseconds) {
+        long totalSeconds = microseconds / 1_000_000;
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
+        long milliseconds = (microseconds % 1_000_000) / 1_000;
+        
+        // Format like in the image: 0:00.000, 0:00.500, 0:01.000
+        return String.format("%d:%02d.%03d", minutes, seconds, milliseconds);
+    }
+    
     private void drawWaveform(Graphics2D g2d, int width, int height) {
         if (waveformData.isEmpty()) return;
         
         g2d.setColor(WAVEFORM_COLOR);
-        g2d.setStroke(new BasicStroke(1.0f));
         
-        int centerY = height / 2;
+        // Offset waveform down to make room for timeline
+        int timelineHeight = 25;
+        int waveformHeight = height - timelineHeight;
+        int centerY = timelineHeight + waveformHeight / 2;
+        
         int dataPoints = waveformData.size();
         float xStep = (float) width / dataPoints;
         
+        // Draw waveform as vertical bars like in the image
         for (int i = 0; i < dataPoints; i++) {
             float amplitude = waveformData.get(i);
-            int barHeight = (int) (amplitude * (height - 20)); // Leave some margin
+            int barHeight = (int) (amplitude * (waveformHeight - 10)); // Leave some margin
             
             int x = (int) (i * xStep);
             int y = centerY - barHeight / 2;
             
+            // Draw as a thin vertical line/bar
+            g2d.setStroke(new BasicStroke(1.0f));
             g2d.drawLine(x, y, x, y + barHeight);
         }
     }
     
     private void drawProgressOverlay(Graphics2D g2d, int width, int height) {
         int progressX = (int) (progress * width);
+        int timelineHeight = 25;
         
-        // Draw progress background (darker area)
+        // Draw progress background (darker area) - only over waveform area
         g2d.setColor(new Color(0, 0, 0, 50));
-        g2d.fillRect(0, 0, progressX, height);
+        g2d.fillRect(0, timelineHeight, progressX, height - timelineHeight);
         
         // Draw progress line
         g2d.setColor(PROGRESS_COLOR);
         g2d.setStroke(new BasicStroke(2.0f));
-        g2d.drawLine(progressX, 0, progressX, height);
+        g2d.drawLine(progressX, timelineHeight, progressX, height);
     }
     
     private void drawHoverIndicator(Graphics2D g2d, int width, int height) {
+        int timelineHeight = 25;
         g2d.setColor(HOVER_COLOR);
         g2d.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 0, new float[]{5}, 0));
-        g2d.drawLine(hoverPosition, 0, hoverPosition, height);
+        g2d.drawLine(hoverPosition, timelineHeight, hoverPosition, height);
     }
     
     // Event handling for seeking
