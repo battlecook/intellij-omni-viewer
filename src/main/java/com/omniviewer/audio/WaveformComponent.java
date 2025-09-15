@@ -224,18 +224,9 @@ public class WaveformComponent extends JPanel {
         int timelineHeight = 25;
         int timelineY = 2;
         
-        // Calculate time intervals - show markers every 0.5 seconds for short audio
-        long intervalMicroseconds = 500_000; // 0.5 seconds
+        // Calculate optimal time interval based on duration and available width
         long totalSeconds = audioDurationMicroseconds / 1_000_000;
-        
-        // Adjust interval based on total duration and width
-        if (totalSeconds > 60) {
-            intervalMicroseconds = 5_000_000; // 5 seconds for longer audio
-        } else if (totalSeconds > 10) {
-            intervalMicroseconds = 1_000_000; // 1 second
-        } else if (totalSeconds <= 3) {
-            intervalMicroseconds = 500_000; // 0.5 seconds for very short audio
-        }
+        long intervalMicroseconds = calculateOptimalInterval(totalSeconds, width, fm);
         
         // Draw timeline markers
         for (long time = 0; time <= audioDurationMicroseconds; time += intervalMicroseconds) {
@@ -253,6 +244,99 @@ public class WaveformComponent extends JPanel {
             g2d.setColor(TIMELINE_TEXT_COLOR);
             g2d.drawString(timeLabel, x - textWidth / 2, timelineY + 12);
         }
+    }
+    
+    private long calculateOptimalInterval(long totalSeconds, int width, FontMetrics fm) {
+        // Target: approximately 8-12 markers across the timeline for good readability
+        int targetMarkers = 10;
+        long baseIntervalSeconds = totalSeconds / targetMarkers;
+        
+        // Round to nice intervals for better readability
+        long intervalSeconds;
+        
+        if (baseIntervalSeconds <= 1) {
+            // For very short audio, use 0.1, 0.2, 0.5, or 1 second intervals
+            if (baseIntervalSeconds <= 0.1) {
+                intervalSeconds = 1; // 1 second minimum
+            } else if (baseIntervalSeconds <= 0.2) {
+                intervalSeconds = 1;
+            } else if (baseIntervalSeconds <= 0.5) {
+                intervalSeconds = 1;
+            } else {
+                intervalSeconds = 1;
+            }
+        } else if (baseIntervalSeconds <= 5) {
+            // Round to 1, 2, or 5 seconds
+            if (baseIntervalSeconds <= 2) {
+                intervalSeconds = 1;
+            } else if (baseIntervalSeconds <= 3) {
+                intervalSeconds = 2;
+            } else {
+                intervalSeconds = 5;
+            }
+        } else if (baseIntervalSeconds <= 30) {
+            // Round to 5, 10, 15, or 30 seconds
+            if (baseIntervalSeconds <= 7) {
+                intervalSeconds = 5;
+            } else if (baseIntervalSeconds <= 12) {
+                intervalSeconds = 10;
+            } else if (baseIntervalSeconds <= 20) {
+                intervalSeconds = 15;
+            } else {
+                intervalSeconds = 30;
+            }
+        } else if (baseIntervalSeconds <= 300) { // 5 minutes
+            // Round to 30 seconds, 1, 2, or 5 minutes
+            if (baseIntervalSeconds <= 60) {
+                intervalSeconds = 30;
+            } else if (baseIntervalSeconds <= 90) {
+                intervalSeconds = 60;
+            } else if (baseIntervalSeconds <= 180) {
+                intervalSeconds = 120;
+            } else {
+                intervalSeconds = 300;
+            }
+        } else {
+            // For very long audio, use 5, 10, 15, or 30 minute intervals
+            long baseIntervalMinutes = baseIntervalSeconds / 60;
+            if (baseIntervalMinutes <= 7) {
+                intervalSeconds = 300; // 5 minutes
+            } else if (baseIntervalMinutes <= 12) {
+                intervalSeconds = 600; // 10 minutes
+            } else if (baseIntervalMinutes <= 20) {
+                intervalSeconds = 900; // 15 minutes
+            } else {
+                intervalSeconds = 1800; // 30 minutes
+            }
+        }
+        
+        // Ensure we don't have too many markers (minimum 50 pixels between markers)
+        int estimatedMarkers = (int) (totalSeconds / intervalSeconds);
+        int minPixelsPerMarker = 50;
+        int maxMarkers = width / minPixelsPerMarker;
+        
+        if (estimatedMarkers > maxMarkers) {
+            // Increase interval to reduce number of markers
+            intervalSeconds = (long) Math.ceil((double) totalSeconds / maxMarkers);
+            // Round up to next nice interval
+            if (intervalSeconds <= 5) {
+                intervalSeconds = 5;
+            } else if (intervalSeconds <= 10) {
+                intervalSeconds = 10;
+            } else if (intervalSeconds <= 30) {
+                intervalSeconds = 30;
+            } else if (intervalSeconds <= 60) {
+                intervalSeconds = 60;
+            } else if (intervalSeconds <= 300) {
+                intervalSeconds = 300;
+            } else if (intervalSeconds <= 600) {
+                intervalSeconds = 600;
+            } else {
+                intervalSeconds = ((intervalSeconds / 300) + 1) * 300; // Round up to next 5-minute mark
+            }
+        }
+        
+        return intervalSeconds * 1_000_000; // Convert to microseconds
     }
     
     private String formatTime(long microseconds) {
