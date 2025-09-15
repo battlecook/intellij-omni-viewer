@@ -88,4 +88,10 @@ public class AudioEditor extends UserDataHolderBase implements FileEditor {
     public FileEditorLocation getCurrentLocation() {
         return null;
     }
+    
+    @Override
+    @NotNull
+    public VirtualFile getFile() {
+        return file;
+    }
 }
