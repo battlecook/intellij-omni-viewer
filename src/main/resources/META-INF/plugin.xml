@@ -1,0 +1,45 @@
+<idea-plugin>
+    <id>com.omniviewer.omni-viewer</id>
+    <name>Omni Viewer</name>
+    <vendor email="support@omniviewer.com" url="https://omniviewer.com">Omni Viewer</vendor>
+
+    <description><![CDATA[
+    <h2>Omni Viewer</h2>
+    <p>A powerful IntelliJ plugin for viewing and editing various file formats including audio, video, images, CSV, and JSONL files.</p>
+    
+    <h3>Features:</h3>
+    <ul>
+        <li><strong>Audio Viewer:</strong> Play, pause, and control audio files directly in IntelliJ</li>
+        <li><strong>Video Viewer:</strong> Watch video files with playback controls</li>
+        <li><strong>Image Viewer:</strong> View and edit images with zoom and pan capabilities</li>
+        <li><strong>CSV Viewer:</strong> View and edit CSV files in a table format</li>
+        <li><strong>JSONL Viewer:</strong> View and edit JSON Lines files</li>
+    </ul>
+    
+    <p>Simply open any supported file type in IntelliJ and start viewing or editing!</p>
+    ]]></description>
+
+    <change-notes><![CDATA[
+    <h3>Version 1.0.0</h3>
+    <ul>
+        <li>Initial release with audio viewer support</li>
+        <li>Basic play/pause controls for audio files</li>
+        <li>Support for common audio formats (MP3, WAV, OGG, etc.)</li>
+    </ul>
+    ]]></change-notes>
+
+    <!-- please see https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Audio file type support -->
+        <fileTypeFactory implementation="com.omniviewer.audio.AudioFileTypeFactory"/>
+        <fileEditorProvider implementation="com.omniviewer.audio.AudioEditorProvider"/>
+    </extensions>
+
+    <actions>
+        <!-- Add your actions here -->
+    </actions>
+</idea-plugin>
