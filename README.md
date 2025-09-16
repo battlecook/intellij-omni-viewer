@@ -2,6 +2,8 @@
 
 A powerful IntelliJ plugin for viewing and editing various file formats including audio, video, images, CSV, and JSONL files.
 
+<a href="https://ko-fi.com/eyedealisty"><img src="https://eyedealisty-website.web.app/img/omniviewer/support_me_on_kofi_blue.png" alt="ko-fi" width="150"></a>
+
 ## Features
 
 ### Audio Viewer (v1.0.0)
@@ -42,7 +44,7 @@ A powerful IntelliJ plugin for viewing and editing various file formats includin
 
 ### Running in Development
 ```bash
-./gradlew runIde
+export JAVA_HOME=/opt/homebrew/opt/openjdk && ./gradlew runIde
 ```
 
 ### Testing

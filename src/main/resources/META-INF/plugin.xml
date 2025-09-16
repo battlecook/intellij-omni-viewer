@@ -37,6 +37,10 @@
         <!-- Audio file type support -->
         <fileTypeFactory implementation="com.omniviewer.audio.AudioFileTypeFactory"/>
         <fileEditorProvider implementation="com.omniviewer.audio.AudioEditorProvider"/>
+        
+        <!-- JSONL file type support -->
+        <fileTypeFactory implementation="com.omniviewer.jsonl.JsonlFileTypeFactory"/>
+        <fileEditorProvider implementation="com.omniviewer.jsonl.JsonlEditorProvider"/>
     </extensions>
 
     <actions>
