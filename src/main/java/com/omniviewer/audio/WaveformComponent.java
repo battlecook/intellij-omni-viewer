@@ -362,17 +362,30 @@ public class WaveformComponent extends JPanel {
         int dataPoints = waveformData.size();
         float xStep = (float) width / dataPoints;
         
-        // Draw waveform as vertical bars like in the image
+        // Draw waveform as vertical bars with improved rendering
         for (int i = 0; i < dataPoints; i++) {
             float amplitude = waveformData.get(i);
-            int barHeight = (int) (amplitude * (waveformHeight - 10)); // Leave some margin
+            
+            // Ensure minimum bar height for visibility
+            int minBarHeight = 2;
+            int barHeight = Math.max(minBarHeight, (int) (amplitude * (waveformHeight - 10)));
             
             int x = (int) (i * xStep);
             int y = centerY - barHeight / 2;
             
-            // Draw as a thin vertical line/bar
-            g2d.setStroke(new BasicStroke(1.0f));
+            // Draw as a thin vertical line/bar with better visibility
+            g2d.setStroke(new BasicStroke(1.5f));
             g2d.drawLine(x, y, x, y + barHeight);
+            
+            // For synthetic MP3 data, add some visual enhancement
+            if (amplitude > 0.1f) {
+                // Draw a subtle highlight for higher amplitude sections
+                g2d.setColor(new Color(WAVEFORM_COLOR.getRed(), WAVEFORM_COLOR.getGreen(), WAVEFORM_COLOR.getBlue(), 100));
+                g2d.setStroke(new BasicStroke(0.5f));
+                g2d.drawLine(x - 1, y, x - 1, y + barHeight);
+                g2d.drawLine(x + 1, y, x + 1, y + barHeight);
+                g2d.setColor(WAVEFORM_COLOR); // Reset color
+            }
         }
     }
     

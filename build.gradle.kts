@@ -13,6 +13,10 @@ repositories {
 
 dependencies {
     // Java Sound API is included in JDK, no additional dependencies needed
+    // MP3 support libraries
+    implementation("javazoom:jlayer:1.0.1")
+    implementation("com.googlecode.soundlibs:mp3spi:1.9.5.4")
+    implementation("com.googlecode.soundlibs:tritonus-share:0.3.7-2")
 }
 
 intellij {
