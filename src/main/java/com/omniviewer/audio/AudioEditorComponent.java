@@ -28,6 +28,12 @@ public class AudioEditorComponent extends JPanel {
     private final AtomicBoolean isPaused = new AtomicBoolean(false);
     private boolean isMP3File = false;
     
+    // MP3 progress tracking
+    private long mp3StartTime = 0;
+    private long mp3Duration = 0;
+    private long mp3PausedPosition = 0; // Position when paused
+    private Thread mp3PlaybackThread = null;
+    
     // UI Components
     private JButton playPauseButton;
     private JButton stopButton;
@@ -298,6 +304,9 @@ public class AudioEditorComponent extends JPanel {
                 // Update metadata
                 updateMetadata();
                 System.out.println("MP3 metadata updated successfully");
+                
+                // If Java Sound API works, we don't need JLayer
+                isMP3File = false; // Treat as standard audio file for seek functionality
                 return;
                 
             } catch (UnsupportedAudioFileException e) {
@@ -427,6 +436,9 @@ public class AudioEditorComponent extends JPanel {
             
             // Set audio duration for timeline
             waveformComponent.setAudioDuration(durationMicroseconds);
+            
+            // Store duration for progress tracking
+            mp3Duration = durationMicroseconds;
             
             // Extract real waveform data from MP3 using JLayer
             System.out.println("Extracting real waveform data from MP3...");
@@ -630,7 +642,9 @@ public class AudioEditorComponent extends JPanel {
     }
     
     private void updateProgress() {
-        if (audioClip != null && audioClip.isOpen()) {
+        if (isMP3File) {
+            updateMP3Progress();
+        } else if (audioClip != null && audioClip.isOpen()) {
             long position = audioClip.getMicrosecondPosition();
             long length = audioClip.getMicrosecondLength();
             
@@ -659,6 +673,42 @@ public class AudioEditorComponent extends JPanel {
                     timeLabel.setText("00:00 / " + totalTime);
                     progressTimer.stop();
                 }
+            }
+        }
+    }
+    
+    private void updateMP3Progress() {
+        if (isPlaying.get() && !isPaused.get() && mp3Duration > 0) {
+            long currentTime = System.currentTimeMillis();
+            long elapsedTime = currentTime - mp3StartTime;
+            long elapsedMicroseconds = elapsedTime * 1000; // Convert to microseconds
+            
+            if (elapsedMicroseconds >= mp3Duration) {
+                // MP3 finished playing
+                isPlaying.set(false);
+                isPaused.set(false);
+                
+                playPauseButton.setText("▶ Play");
+                playPauseButton.setEnabled(true);
+                stopButton.setEnabled(false);
+                statusLabel.setText("Finished");
+                waveformComponent.setProgress(1.0f);
+                timeLabel.setText(formatTime(mp3Duration) + " / " + formatTime(mp3Duration));
+                progressTimer.stop();
+                
+                // Close the player
+                if (mp3Player != null) {
+                    mp3Player.close();
+                }
+            } else {
+                // Update progress
+                float progress = (float) elapsedMicroseconds / mp3Duration;
+                waveformComponent.setProgress(progress);
+                
+                // Update time labels
+                String currentTimeStr = formatTime(elapsedMicroseconds);
+                String totalTimeStr = formatTime(mp3Duration);
+                timeLabel.setText(currentTimeStr + " / " + totalTimeStr);
             }
         }
     }
@@ -694,7 +744,20 @@ public class AudioEditorComponent extends JPanel {
             if (isPlaying.get()) {
                 // Currently playing, so pause
                 System.out.println("Pausing MP3 playback...");
-                mp3Player.close();
+                
+                // Calculate current position before pausing
+                long currentTime = System.currentTimeMillis();
+                long elapsedTime = currentTime - mp3StartTime;
+                mp3PausedPosition = elapsedTime * 1000; // Convert to microseconds
+                
+                // Close the player and stop the thread
+                if (mp3Player != null) {
+                    mp3Player.close();
+                }
+                if (mp3PlaybackThread != null) {
+                    mp3PlaybackThread.interrupt();
+                }
+                
                 isPlaying.set(false);
                 isPaused.set(true);
                 
@@ -702,7 +765,9 @@ public class AudioEditorComponent extends JPanel {
                 stopButton.setEnabled(true);
                 statusLabel.setText("Paused");
                 progressTimer.stop();
-                System.out.println("MP3 playback paused");
+                System.out.println("MP3 playback paused at position: " + mp3PausedPosition);
+                
+                // Note: We don't reset the progress here, so it stays at current position
             } else {
                 // Not playing, so play
                 System.out.println("Starting MP3 playback...");
@@ -714,23 +779,51 @@ public class AudioEditorComponent extends JPanel {
                     isPaused.set(false);
                     System.out.println("Fresh MP3 player created for playback");
                     
+                    // Set up progress tracking
+                    if (mp3Duration == 0) {
+                        // First time playing, get duration
+                        mp3Duration = getMP3DurationWithJLayer() * 1000000; // Convert to microseconds
+                        System.out.println("MP3 duration set to: " + mp3Duration + " microseconds");
+                    }
+                    
+                    // Calculate start time based on current progress or paused position
+                    long elapsedMicroseconds;
+                    if (isPaused.get() && mp3PausedPosition > 0) {
+                        // Resume from paused position
+                        elapsedMicroseconds = mp3PausedPosition;
+                        System.out.println("Resuming MP3 from paused position: " + mp3PausedPosition);
+                    } else {
+                        // Start from current progress
+                        float currentProgress = waveformComponent.getProgress();
+                        elapsedMicroseconds = (long) (currentProgress * mp3Duration);
+                        System.out.println("MP3 start time adjusted for progress: " + currentProgress);
+                    }
+                    
+                    mp3StartTime = System.currentTimeMillis() - (elapsedMicroseconds / 1000);
+                    
                     // Start playing in a separate thread
                     System.out.println("Starting MP3 playback thread...");
-                    new Thread(() -> {
+                    mp3PlaybackThread = new Thread(() -> {
                         try {
                             System.out.println("MP3 playback thread started, calling mp3Player.play()...");
                             mp3Player.play();
                             System.out.println("MP3 playback completed");
-                            // When playback finishes
-                            SwingUtilities.invokeLater(() -> {
-                                isPlaying.set(false);
-                                isPaused.set(false);
-                                playPauseButton.setText("▶ Play");
-                                stopButton.setEnabled(false);
-                                statusLabel.setText("Finished");
-                                progressTimer.stop();
-                                System.out.println("MP3 playback finished, UI updated");
-                            });
+                            
+                            // Only update UI if we're still playing (not paused)
+                            if (isPlaying.get()) {
+                                SwingUtilities.invokeLater(() -> {
+                                    isPlaying.set(false);
+                                    isPaused.set(false);
+                                    playPauseButton.setText("▶ Play");
+                                    stopButton.setEnabled(false);
+                                    statusLabel.setText("Finished");
+                                    progressTimer.stop();
+                                    waveformComponent.setProgress(1.0f);
+                                    System.out.println("MP3 playback finished, UI updated");
+                                });
+                            } else {
+                                System.out.println("MP3 playback completed but was paused, not updating UI");
+                            }
                         } catch (JavaLayerException ex) {
                             System.err.println("=== JavaLayerException in MP3 playback thread ===");
                             System.err.println("MP3 playback error: " + ex.getMessage());
@@ -741,9 +834,11 @@ public class AudioEditorComponent extends JPanel {
                                 isPaused.set(false);
                                 playPauseButton.setText("▶ Play");
                                 stopButton.setEnabled(false);
+                                progressTimer.stop();
                             });
                         }
-                    }).start();
+                    });
+                    mp3PlaybackThread.start();
                     
                     isPlaying.set(true);
                     playPauseButton.setText("⏸ Pause");
@@ -813,14 +908,25 @@ public class AudioEditorComponent extends JPanel {
             if (mp3Player != null) {
                 mp3Player.close();
             }
+            if (mp3PlaybackThread != null) {
+                mp3PlaybackThread.interrupt();
+            }
+            
             isPlaying.set(false);
             isPaused.set(false);
+            mp3PausedPosition = 0; // Reset paused position
             
             playPauseButton.setText("▶ Play");
             playPauseButton.setEnabled(true);
             stopButton.setEnabled(false);
             statusLabel.setText("Stopped");
             progressTimer.stop();
+            
+            // Reset progress
+            waveformComponent.setProgress(0.0f);
+            if (mp3Duration > 0) {
+                timeLabel.setText("00:00 / " + formatTime(mp3Duration));
+            }
         }
         
         private void handleStandardAudioStop() {
@@ -849,7 +955,9 @@ public class AudioEditorComponent extends JPanel {
     }
     
     private void onSeek(float progress) {
-        if (audioClip != null && audioClip.isOpen()) {
+        if (isMP3File) {
+            handleMP3Seek(progress);
+        } else if (audioClip != null && audioClip.isOpen()) {
             long totalFrames = audioClip.getFrameLength();
             long targetFrame = (long) (totalFrames * progress);
             audioClip.setFramePosition((int) targetFrame);
@@ -863,6 +971,133 @@ public class AudioEditorComponent extends JPanel {
                 timeLabel.setText(currentTime + " / " + totalTime);
             }
         }
+    }
+    
+    private void handleMP3Seek(float progress) {
+        System.out.println("=== handleMP3Seek() called with progress: " + progress + " ===");
+        
+        if (mp3Duration <= 0) {
+            System.out.println("MP3 duration not set, cannot seek");
+            return;
+        }
+        
+        // Calculate target position in microseconds
+        long targetPosition = (long) (progress * mp3Duration);
+        System.out.println("Target position: " + targetPosition + " microseconds");
+        
+        boolean wasPlaying = isPlaying.get();
+        
+        if (isPlaying.get()) {
+            // If currently playing, stop current playback
+            System.out.println("Currently playing, stopping current playback for seek...");
+            
+            // Stop current playback
+            if (mp3Player != null) {
+                mp3Player.close();
+            }
+            if (mp3PlaybackThread != null) {
+                mp3PlaybackThread.interrupt();
+            }
+            
+            // Set the paused position to the target position
+            mp3PausedPosition = targetPosition;
+            
+            // Update UI temporarily
+            isPlaying.set(false);
+            isPaused.set(true);
+            playPauseButton.setText("▶ Play");
+            stopButton.setEnabled(true);
+            statusLabel.setText("Seeking...");
+            progressTimer.stop();
+            
+            System.out.println("MP3 playback stopped for seek at position: " + targetPosition);
+        } else {
+            // If not playing, just update the position for when playback starts
+            System.out.println("Not currently playing, updating position for future playback");
+            mp3PausedPosition = targetPosition;
+        }
+        
+        // Update the progress display immediately
+        String currentTime = formatTime(targetPosition);
+        String totalTime = formatTime(mp3Duration);
+        timeLabel.setText(currentTime + " / " + totalTime);
+        
+        // If was playing before seek, automatically resume playback from new position
+        if (wasPlaying) {
+            System.out.println("Was playing before seek, automatically resuming playback...");
+            // Use a slight delay to ensure the previous player is fully closed
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    // Create a fresh player for the new position
+                    System.out.println("Creating fresh MP3 player for seek resume...");
+                    InputStream mp3InputStream = file.getInputStream();
+                    mp3Player = new Player(mp3InputStream);
+                    isPaused.set(false);
+                    System.out.println("Fresh MP3 player created for seek resume");
+                    
+                    // Calculate start time based on seek position
+                    mp3StartTime = System.currentTimeMillis() - (targetPosition / 1000);
+                    
+                    // Start playing in a separate thread
+                    System.out.println("Starting MP3 playback thread after seek...");
+                    mp3PlaybackThread = new Thread(() -> {
+                        try {
+                            System.out.println("MP3 playback thread started after seek, calling mp3Player.play()...");
+                            mp3Player.play();
+                            System.out.println("MP3 playback completed after seek");
+                            
+                            // Only update UI if we're still playing (not paused)
+                            if (isPlaying.get()) {
+                                SwingUtilities.invokeLater(() -> {
+                                    isPlaying.set(false);
+                                    isPaused.set(false);
+                                    playPauseButton.setText("▶ Play");
+                                    stopButton.setEnabled(false);
+                                    statusLabel.setText("Finished");
+                                    progressTimer.stop();
+                                    waveformComponent.setProgress(1.0f);
+                                    System.out.println("MP3 playback finished after seek, UI updated");
+                                });
+                            } else {
+                                System.out.println("MP3 playback completed after seek but was paused, not updating UI");
+                            }
+                        } catch (JavaLayerException ex) {
+                            System.err.println("=== JavaLayerException in MP3 playback thread after seek ===");
+                            System.err.println("MP3 playback error after seek: " + ex.getMessage());
+                            ex.printStackTrace();
+                            SwingUtilities.invokeLater(() -> {
+                                statusLabel.setText("MP3 playback error: " + ex.getMessage());
+                                isPlaying.set(false);
+                                isPaused.set(false);
+                                playPauseButton.setText("▶ Play");
+                                stopButton.setEnabled(false);
+                                progressTimer.stop();
+                            });
+                        }
+                    });
+                    mp3PlaybackThread.start();
+                    
+                    isPlaying.set(true);
+                    playPauseButton.setText("⏸ Pause");
+                    stopButton.setEnabled(true);
+                    statusLabel.setText("Playing MP3...");
+                    progressTimer.start();
+                    System.out.println("MP3 playback resumed after seek successfully");
+                    
+                } catch (Exception ex) {
+                    System.err.println("=== Exception in MP3 seek resume ===");
+                    System.err.println("Error resuming MP3 playback after seek: " + ex.getMessage());
+                    ex.printStackTrace();
+                    statusLabel.setText("Error resuming MP3 playback: " + ex.getMessage());
+                    isPlaying.set(false);
+                    isPaused.set(false);
+                    playPauseButton.setText("▶ Play");
+                    stopButton.setEnabled(false);
+                }
+            });
+        }
+        
+        System.out.println("MP3 seek completed - Position: " + currentTime + " / " + totalTime);
     }
     
     public void dispose() {
