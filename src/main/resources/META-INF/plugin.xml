@@ -20,6 +20,13 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <h3>Version 0.1.1</h3>
+    <ul>
+        <li>Added multi-IDE compatibility support</li>
+        <li>Now works with GoLand, PhpStorm, WebStorm, and other JetBrains IDEs</li>
+        <li>Improved plugin compatibility configuration</li>
+    </ul>
+    
     <h3>Version 0.1.0</h3>
     <ul>
         <li>Initial release with audio viewer support</li>
