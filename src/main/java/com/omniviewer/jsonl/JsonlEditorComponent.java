@@ -43,7 +43,6 @@ public class JsonlEditorComponent extends JPanel {
     
     private void initializeEditor() {
         if (editor == null) return;
-        
         // Configure editor
         editor.getSettings().setLineNumbersShown(true);
         editor.getSettings().setGutterIconsShown(true);
@@ -53,7 +52,7 @@ public class JsonlEditorComponent extends JPanel {
         editor.getSettings().setIndentGuidesShown(true);
         
         // Add mouse listeners for hover functionality
-        editor.addEditorMouseMotionListener(new EditorMouseMotionListener() {
+        EditorMouseMotionListener motionListener = new EditorMouseMotionListener() {
             @Override
             public void mouseMoved(@NotNull EditorMouseEvent event) {
                 handleMouseMove(event);
@@ -63,9 +62,10 @@ public class JsonlEditorComponent extends JPanel {
             public void mouseDragged(@NotNull EditorMouseEvent event) {
                 // Not needed for hover functionality
             }
-        });
+        };
+        editor.addEditorMouseMotionListener(motionListener);
         
-        editor.addEditorMouseListener(new EditorMouseListener() {
+        EditorMouseListener clickListener = new EditorMouseListener() {
             @Override
             public void mousePressed(@NotNull EditorMouseEvent event) {
                 hideCurrentPopup();
@@ -90,10 +90,16 @@ public class JsonlEditorComponent extends JPanel {
             public void mouseExited(@NotNull EditorMouseEvent event) {
                 hideCurrentPopup();
             }
-        });
+        };
+        editor.addEditorMouseListener(clickListener);
         
         // Add editor to panel
         add(editor.getComponent(), BorderLayout.CENTER);
+        
+        // Make sure the editor can receive focus
+        editor.getComponent().setFocusable(true);
+        editor.getComponent().requestFocus();
+        
         revalidate();
         repaint();
     }
@@ -104,9 +110,6 @@ public class JsonlEditorComponent extends JPanel {
         Point point = event.getMouseEvent().getPoint();
         LogicalPosition logicalPos = editor.xyToLogicalPosition(point);
         int lineNumber = logicalPos.line;
-        
-        // Debug: Print line number
-        System.out.println("Mouse moved to line: " + lineNumber);
         
         // If we're hovering over the same line, don't do anything
         if (lineNumber == lastHoveredLine) {
@@ -125,18 +128,13 @@ public class JsonlEditorComponent extends JPanel {
         lastHoveredLine = lineNumber;
         
         // Start new timer for hover delay
-        System.out.println("Starting timer for line: " + lineNumber);
         hoverTimer = new Timer();
         hoverTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-                System.out.println("Timer executed for line: " + lineNumber + ", lastHoveredLine: " + lastHoveredLine);
                 ApplicationManager.getApplication().invokeLater(() -> {
                     if (lineNumber == lastHoveredLine) {
-                        System.out.println("Showing popup for line: " + lineNumber);
                         showJsonPopup(lineNumber);
-                    } else {
-                        System.out.println("Line changed, not showing popup. Current: " + lineNumber + ", Last: " + lastHoveredLine);
                     }
                 });
             }
@@ -145,21 +143,21 @@ public class JsonlEditorComponent extends JPanel {
     
     private void showJsonPopup(int lineNumber) {
         try {
-            String lineContent = document.getText().split("\n")[lineNumber].trim();
-            System.out.println("Line content: " + lineContent);
+            String[] lines = document.getText().split("\n");
+            if (lineNumber >= lines.length) {
+                return;
+            }
+            
+            String lineContent = lines[lineNumber].trim();
             
             if (lineContent.isEmpty()) {
-                System.out.println("Line is empty, skipping popup");
                 return;
             }
             
             // Validate if the line contains valid JSON
             if (!isValidJson(lineContent)) {
-                System.out.println("Invalid JSON, skipping popup");
                 return;
             }
-            
-            System.out.println("Valid JSON found, showing popup");
             
             // Hide current popup
             hideCurrentPopup();
@@ -175,8 +173,7 @@ public class JsonlEditorComponent extends JPanel {
             currentPopup.showPopup(editor.getComponent(), lineStart.x + 20, lineStart.y + 20);
             
         } catch (Exception e) {
-            System.out.println("Error showing popup: " + e.getMessage());
-            e.printStackTrace();
+            // Silently handle errors
         }
     }
     
@@ -206,6 +203,11 @@ public class JsonlEditorComponent extends JPanel {
             if (json.equals("true") || json.equals("false") || json.equals("null") ||
                 json.matches("^-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?$") ||
                 (json.startsWith("\"") && json.endsWith("\""))) {
+                return true;
+            }
+            
+            // More lenient check - if it contains basic JSON structure, consider it valid
+            if (json.contains("{") || json.contains("[") || json.contains("\"")) {
                 return true;
             }
             

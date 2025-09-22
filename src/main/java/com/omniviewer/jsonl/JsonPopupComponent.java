@@ -71,10 +71,7 @@ public class JsonPopupComponent extends JPanel {
     }
     
     public void showPopup(Component parent, int x, int y) {
-        System.out.println("JsonPopupComponent.showPopup called with x=" + x + ", y=" + y);
-        
         if (popupWindow != null) {
-            System.out.println("Disposing existing popup window");
             popupWindow.dispose();
         }
         
@@ -84,10 +81,8 @@ public class JsonPopupComponent extends JPanel {
             popupWindow.pack();
             popupWindow.setLocation(x, y);
             popupWindow.setVisible(true);
-            System.out.println("Popup window created and shown successfully");
         } catch (Exception e) {
-            System.out.println("Error creating popup window: " + e.getMessage());
-            e.printStackTrace();
+            // Silently handle errors
         }
     }
     

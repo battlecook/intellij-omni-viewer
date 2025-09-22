@@ -1,5 +1,5 @@
 <idea-plugin>
-    <id>com.omniviewer.omni-viewer</id>
+    <id>com.battlecook.omni-viewer</id>
     <name>Omni Viewer</name>
     <vendor email="battlecookoss@gmail.com" url="https://github.com/battlecook/intellij-omni-viewer.git">Omni Viewer</vendor>
 

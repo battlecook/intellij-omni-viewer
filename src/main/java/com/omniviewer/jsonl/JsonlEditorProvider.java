@@ -32,6 +32,6 @@ public class JsonlEditorProvider implements FileEditorProvider, DumbAware {
     @Override
     @NotNull
     public FileEditorPolicy getPolicy() {
-        return FileEditorPolicy.NONE;
+        return FileEditorPolicy.HIDE_DEFAULT_EDITOR;
     }
 }
