@@ -20,6 +20,14 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <h3>Version 0.1.2</h3>
+    <ul>
+        <li>Fixed JSONL editor popup functionality - hover over JSON lines to see formatted content</li>
+        <li>Improved JSON validation for better compatibility</li>
+        <li>Enhanced editor focus management for better user experience</li>
+        <li>Updated plugin ID to com.battlecook.omni-viewer</li>
+    </ul>
+    
     <h3>Version 0.1.1</h3>
     <ul>
         <li>Added multi-IDE compatibility support</li>
