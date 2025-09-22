@@ -6,7 +6,7 @@ A powerful IntelliJ plugin for viewing and editing various file formats includin
 
 ## Features
 
-### Audio Viewer (v1.0.0)
+### Audio Viewer (v0.1.0)
 - **Play/Pause/Stop Controls**: Full audio playback control
 - **Progress Bar**: Visual progress indicator with time display
 - **Multiple Format Support**: MP3, WAV, OGG, FLAC, M4A, AAC, WMA

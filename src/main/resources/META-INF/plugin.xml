@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.omniviewer.omni-viewer</id>
     <name>Omni Viewer</name>
-    <vendor email="support@omniviewer.com" url="https://omniviewer.com">Omni Viewer</vendor>
+    <vendor email="battlecookoss@gmail.com" url="https://github.com/battlecook/intellij-omni-viewer.git">Omni Viewer</vendor>
 
     <description><![CDATA[
     <h2>Omni Viewer</h2>
@@ -20,7 +20,7 @@
     ]]></description>
 
     <change-notes><![CDATA[
-    <h3>Version 1.0.0</h3>
+    <h3>Version 0.1.0</h3>
     <ul>
         <li>Initial release with audio viewer support</li>
         <li>Basic play/pause controls for audio files</li>
