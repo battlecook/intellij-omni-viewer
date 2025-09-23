@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.omniviewer"
-version = "0.1.3"
+version = "0.1.4"
 
 repositories {
     mavenCentral()
@@ -39,7 +39,7 @@ tasks {
 
     patchPluginXml {
         sinceBuild.set("232")
-        untilBuild.set("242.*")
+        untilBuild.set("252.*")
         
         // Plugin compatibility for multiple IDEs
         pluginDescription.set("""

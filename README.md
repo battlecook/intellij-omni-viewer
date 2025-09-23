@@ -20,6 +20,19 @@ A powerful IntelliJ plugin for viewing and editing various file formats includin
 
 ## Installation
 
+### Option 1: JetBrains Marketplace (Recommended)
+
+Install directly from the JetBrains Marketplace:
+
+<div id="marketplace-widget"></div>
+
+<script src="https://plugins.jetbrains.com/assets/scripts/mp-widget.js"></script>
+<script>
+  MarketplaceWidget.setupMarketplaceWidget('install', 28550, "#marketplace-widget");
+</script>
+
+### Option 2: Manual Installation
+
 1. Build the plugin:
    ```bash
    ./gradlew buildPlugin
