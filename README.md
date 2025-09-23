@@ -6,7 +6,7 @@ A powerful IntelliJ plugin for viewing and editing various file formats includin
 
 ## Features
 
-### Audio Viewer (v0.1.0)
+### Audio Viewer
 - **Play/Pause/Stop Controls**: Full audio playback control
 - **Progress Bar**: Visual progress indicator with time display
 - **Multiple Format Support**: MP3, WAV, OGG, FLAC, M4A, AAC, WMA
@@ -24,12 +24,7 @@ A powerful IntelliJ plugin for viewing and editing various file formats includin
 
 Install directly from the JetBrains Marketplace:
 
-<div id="marketplace-widget"></div>
-
-<script src="https://plugins.jetbrains.com/assets/scripts/mp-widget.js"></script>
-<script>
-  MarketplaceWidget.setupMarketplaceWidget('install', 28550, "#marketplace-widget");
-</script>
+[![Install Plugin](https://img.shields.io/badge/Install%20Plugin-JetBrains%20Marketplace-blue?style=for-the-badge&logo=jetbrains)](https://plugins.jetbrains.com/plugin/28550-omni-viewer)
 
 ### Option 2: Manual Installation
 
